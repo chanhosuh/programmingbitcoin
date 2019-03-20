@@ -108,16 +108,32 @@ class Tx:
         '''Takes a byte stream and parses the transaction at the start
         return a Tx object
         '''
-        # s.read(n) will return n bytes
         # version is an integer in 4 bytes, little-endian
+        version_bytes = s.read(4)
+        version = int.from_bytes(version_bytes, 'little')
+        
         # num_inputs is a varint, use read_varint(s)
         # parse num_inputs number of TxIns
+        num_inputs = read_varint(s)
+        tx_ins = [TxIn.parse(s) for _ in range(num_inputs)]
+
         # num_outputs is a varint, use read_varint(s)
         # parse num_outputs number of TxOuts
+        num_outputs = read_varint(s)
+        tx_outs = [TxOut.parse(s) for _ in range(num_outputs)]
+        
         # locktime is an integer in 4 bytes, little-endian
         # return an instance of the class (see __init__ for args)
-        raise NotImplementedError
-
+        locktime = int.from_bytes(s.read(4), 'little')
+        
+        return Tx(
+            version=version,
+            tx_ins=tx_ins,
+            tx_outs=tx_outs,
+            locktime=locktime,
+            testnet=testnet,
+        )
+        
     # tag::source6[]
     def serialize(self):
         '''Returns the byte serialization of the transaction'''
@@ -138,8 +154,10 @@ class Tx:
         # use TxIn.value() to sum up the input amounts
         # use TxOut.amount to sum up the output amounts
         # fee is input sum - output sum
-        raise NotImplementedError
-
+        input_sum = sum(input.value() for input in self.tx_ins)
+        output_sum = sum(output.amount for output in self.tx_outs)
+        return input_sum - output_sum
+        
 
 # tag::source2[]
 class TxIn:
@@ -169,8 +187,18 @@ class TxIn:
         # use Script.parse to get the ScriptSig
         # sequence is an integer in 4 bytes, little-endian
         # return an instance of the class (see __init__ for args)
-        raise NotImplementedError
-
+        prev_tx = s.read(32)[::-1]
+        prev_index = int.from_bytes(s.read(4), 'little')
+        script_sig = Script.parse(s)
+        sequence = int.from_bytes(s.read(4), 'little')
+        return TxIn(
+            prev_tx=prev_tx,
+            prev_index=prev_index,
+            script_sig=script_sig,
+            sequence=sequence,
+        )
+        
+        
     # tag::source5[]
     def serialize(self):
         '''Returns the byte serialization of the transaction input'''
@@ -220,8 +248,14 @@ class TxOut:
         # amount is an integer in 8 bytes, little endian
         # use Script.parse to get the ScriptPubKey
         # return an instance of the class (see __init__ for args)
-        raise NotImplementedError
-
+        amount = int.from_bytes(s.read(8), 'little')
+        script_pubkey = Script.parse(s)
+        
+        return TxOut(
+            amount=amount,
+            script_pubkey=script_pubkey,
+        )
+        
     # tag::source4[]
     def serialize(self):  # <1>
         '''Returns the byte serialization of the transaction output'''

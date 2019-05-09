@@ -228,12 +228,17 @@ class Tx:
         # get the signature hash (z)
         # get der signature of z from private key
         # append the SIGHASH_ALL to der (use SIGHASH_ALL.to_bytes(1, 'big'))
+        z = self.sig_hash(input_index)
+        der = private_key.sign(z).der()
+        sig = der + SIGHASH_ALL.to_bytes(1, 'big')
         # calculate the sec
+        sec = private_key.point.sec()
         # initialize a new script with [sig, sec] as the cmds
+        script_sig = Script([sig, sec])
         # change input's script_sig to new script
+        self.tx_ins[input_index].script_sig = script_sig 
         # return whether sig is valid using self.verify_input
-        raise NotImplementedError
-
+        return self.verify_input(input_index)
 
 class TxIn:
 

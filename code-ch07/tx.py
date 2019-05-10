@@ -170,7 +170,6 @@ class Tx:
             # the previous tx's ScriptPubkey is the ScriptSig
             # Otherwise, the ScriptSig is empty
             # add the serialization of the input with the ScriptSig we want
-        script_sig = b''
         for i, tx_in in enumerate(self.tx_ins):
             if i == input_index:
                 modified_script_sig = tx_in.script_pubkey(self.testnet)
@@ -224,7 +223,7 @@ class Tx:
         return True
     # end::source2[]
 
-    def sign_input(self, input_index, private_key):
+    def sign_input(self, input_index, private_key, compressed=True):
         # get the signature hash (z)
         # get der signature of z from private key
         # append the SIGHASH_ALL to der (use SIGHASH_ALL.to_bytes(1, 'big'))
@@ -232,7 +231,7 @@ class Tx:
         der = private_key.sign(z).der()
         sig = der + SIGHASH_ALL.to_bytes(1, 'big')
         # calculate the sec
-        sec = private_key.point.sec()
+        sec = private_key.point.sec(compressed)
         # initialize a new script with [sig, sec] as the cmds
         script_sig = Script([sig, sec])
         # change input's script_sig to new script

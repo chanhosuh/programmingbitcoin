@@ -258,20 +258,35 @@ class Tx:
     def is_coinbase(self):
         '''Returns whether this transaction is a coinbase transaction or not'''
         # check that there is exactly 1 input
-        # grab the first input
+        if not len(self.tx_ins) == 1:
+            return False
+    
+        tx_input = self.tx_ins[0]
+     
         # check that first input prev_tx is b'\x00' * 32 bytes
+        if tx_input.prev_tx != b'\x00' * 32:
+            return False
         # check that first input prev_index is 0xffffffff
-        raise NotImplementedError
+        if tx_input.prev_index != 0xffffffff:
+            return False
+        
+        return True
 
     def coinbase_height(self):
         '''Returns the height of the block this coinbase transaction is in
         Returns None if this transaction is not a coinbase transaction
         '''
         # if this is NOT a coinbase transaction, return None
+        if not self.is_coinbase():
+            return None
         # grab the first cmd
+        coinbase_input = self.tx_ins[0]
+        coinbase_script = coinbase_input.script_sig.cmds
+        coinbase_height = coinbase_script[0]
         # convert the cmd from little endian to int
-        raise NotImplementedError
-
+        coinbase_height = little_endian_to_int(coinbase_height)
+        return coinbase_height
+    
 
 class TxIn:
 

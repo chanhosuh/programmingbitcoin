@@ -8,6 +8,7 @@ SIGHASH_NONE = 2
 SIGHASH_SINGLE = 3
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 TWO_WEEKS = 60 * 60 * 24 * 14
+MAX_TARGET = 0xffff * 256**(0x1d-3)
 
 
 def run(test):
@@ -155,11 +156,20 @@ def calculate_new_bits(previous_bits, time_differential):
     '''Calculates the new bits given
     a 2016-block time differential and the previous bits'''
     # if the time differential is greater than 8 weeks, set to 8 weeks
+    if time_differential > 4 * TWO_WEEKS:
+        time_differential = 4 * TWO_WEEKS
     # if the time differential is less than half a week, set to half a week
+    if time_differential < TWO_WEEKS // 4:
+        time_differential = TWO_WEEKS // 4
     # the new target is the previous target * time differential / two weeks
+    previous_target = bits_to_target(previous_bits)
+    new_target = previous_target * time_differential // TWO_WEEKS
     # if the new target is bigger than MAX_TARGET, set to MAX_TARGET
+    if new_target > MAX_TARGET:
+        new_target = MAX_TARGET
     # convert the new target to bits
-    raise NotImplementedError
+    new_bits = target_to_bits(new_target)
+    return new_bits
 
 
 class HelperTest(TestCase):

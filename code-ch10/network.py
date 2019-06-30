@@ -152,21 +152,35 @@ class VersionMessage:
 
     def serialize(self):
         '''Serialize this message to send over the network'''
+        message_bytes = b''
         # version is 4 bytes little endian
+        message_bytes += self.version.to_bytes(4, 'little')
         # services is 8 bytes little endian
+        message_bytes += self.services.to_bytes(8, 'little')
         # timestamp is 8 bytes little endian
+        message_bytes += self.timestamp.to_bytes(8, 'little')
         # receiver services is 8 bytes little endian
+        message_bytes += self.receiver_services.to_bytes(8, 'little')
         # IPV4 is 10 00 bytes and 2 ff bytes then receiver ip
+        message_bytes += b'\x00' * 10 + b'\xff' * 2 + self.receiver_ip
         # receiver port is 2 bytes, big endian
+        message_bytes += self.receiver_port.to_bytes(2, 'big')
         # sender services is 8 bytes little endian
+        message_bytes += self.sender_services.to_bytes(8, 'little')
         # IPV4 is 10 00 bytes and 2 ff bytes then sender ip
+        message_bytes += b'\x00' * 10 + b'\xff' * 2 + self.sender_ip
         # sender port is 2 bytes, big endian
+        message_bytes += self.sender_port.to_bytes(2, 'big')
         # nonce should be 8 bytes
+        message_bytes += self.nonce
         # useragent is a variable string, so varint first
+        message_bytes += encode_varint(len(self.user_agent))
+        message_bytes += self.user_agent
         # latest block is 4 bytes little endian
+        message_bytes += self.latest_block.to_bytes(4, 'little')
         # relay is 00 if false, 01 if true
-        raise NotImplementedError
-
+        message_bytes += b'\x01' if self.relay else b'\x00'
+        return message_bytes
 
 class VersionMessageTest(TestCase):
 
@@ -305,11 +319,20 @@ class SimpleNode:
         '''Do a handshake with the other node.
         Handshake is sending a version message and getting a verack back.'''
         # create a version message
+        message = VersionMessage()
         # send the command
-        # wait for a verack message
-        raise NotImplementedError
-    # tag::source4[]
+        self.send(message)
+        # wait for verack and version messages
+        verack_received = False
+        version_received = False
+        while not (verack_received and version_received):
+            message = self.wait_for(VerAckMessage, VersionMessage)
+            if message.command == VerAckMessage.command:
+                verack_received = True
+            else:
+                version_received = True
 
+    # tag::source4[]
     def send(self, message):  # <1>
         '''Send a message to the connected node'''
         envelope = NetworkEnvelope(
